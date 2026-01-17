@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CryptoID</title>
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#0e0f12; color:#fff; }
+    .wrap { max-width:720px; margin:0 auto; padding:24px; }
+    .card { background:#151820; border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:18px; }
+    .muted { color: rgba(255,255,255,.65); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; }
+    button, a.btn {
+      background:#1f2430; color:#fff; border:1px solid rgba(255,255,255,.10);
+      border-radius:12px; padding:12px 14px; cursor:pointer; text-decoration:none;
+    }
+    button:hover, a.btn:hover { background:#262c3a; }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; background:rgba(225,191,65,.12); border:1px solid rgba(225,191,65,.22); color:#E1BF41; font-size:13px; }
+    .links a { display:block; padding:10px 12px; border-radius:12px; background:#11141b; border:1px solid rgba(255,255,255,.08); color:#fff; text-decoration:none; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="pill" id="modePill">CryptoID Link</div>
+    <h1 style="margin:14px 0 6px;">CryptoID Profile</h1>
+    <p class="muted" id="subtitle">Open a profile shared via QR/NFC.</p>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="muted" style="font-size:13px;">Profile ID</div>
+      <div id="profileId" style="font-size:16px; margin-top:6px; word-break:break-all;"></div>
+
+      <div style="height:12px"></div>
+
+      <div id="status" class="muted">Loading…</div>
+
+      <div class="row">
+        <button id="copyBtn">Copy Link</button>
+        <button id="shareBtn">Share</button>
+        <button id="txtBtn">Download .txt</button>
+        <button id="vcfBtn">Save Contact (.vcf)</button>
+      </div>
+
+      <div class="links" id="links" style="margin-top:14px; display:none;"></div>
+
+      <div style="margin-top:16px;" class="muted">
+        Don’t have the app? You can still view public links here.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function getProfileIdFromHash() {
+      // expected: #/p/<profileId>
+      const h = window.location.hash || "";
+      const parts = h.replace(/^#\/?/, "").split("/");
+      if (parts.length >= 2 && parts[0] === "p") return decodeURIComponent(parts[1]);
+      return null;
+    }
+
+    const profileId = getProfileIdFromHash();
+    const profileIdEl = document.getElementById("profileId");
+    const statusEl = document.getElementById("status");
+    const linksEl = document.getElementById("links");
+
+    const currentUrl = window.location.href;
+
+    profileIdEl.textContent = profileId ?? "(missing)";
+
+    // Actions
+    document.getElementById("copyBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        statusEl.textContent = "Copied link ✅";
+      } catch (e) {
+        statusEl.textContent = "Copy failed. Long-press the URL in browser.";
+      }
+    };
+
+    document.getElementById("shareBtn").onclick = async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: "CryptoID Profile", text: "CryptoID profile link", url: currentUrl });
+          statusEl.textContent = "Shared ✅";
+        } else {
+          statusEl.textContent = "Share not supported here. Use Copy Link.";
+        }
+      } catch (e) {
+        statusEl.textContent = "Share canceled.";
+      }
+    };
+
+    document.getElementById("txtBtn").onclick = () => {
+      const blob = new Blob([currentUrl + "\n"], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "cryptoid-link.txt";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      statusEl.textContent = "Downloaded .txt ✅";
+    };
+
+    document.getElementById("vcfBtn").onclick = () => {
+      const name = "CryptoID Profile";
+      const vcf =
+`BEGIN:VCARD
+VERSION:3.0
+FN:${name}
+NOTE:CryptoID profile link
+URL:${currentUrl}
+END:VCARD`;
+      const blob = new Blob([vcf], { type: "text/vcard" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "cryptoid.vcf";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      statusEl.textContent = "Downloaded contact ✅";
+    };
+
+    // For now, show placeholder. Next step we’ll fetch real data from Firestore.
+    if (!profileId) {
+      statusEl.textContent = "Invalid link. Expected format: #/p/<profileId>";
+    } else {
+      statusEl.textContent = "Profile loaded (demo). Next: connect Firestore to show links.";
+      // Demo links (remove later)
+      linksEl.style.display = "block";
+      linksEl.innerHTML = `
+        <a href="https://example.com" target="_blank" rel="noopener">Example link</a>
+      `;
+    }
+  </script>
+</body>
+</html>
