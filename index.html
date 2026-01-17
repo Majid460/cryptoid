@@ -58,19 +58,18 @@
     projectId: "cryptoid-26e0e",
     storageBucket: "cryptoid-26e0e.firebasestorage.app",
     messagingSenderId: "361788135471",
-    appId: "1:361788135471:web:c7ea5f0486138b0064ceda",
-    measurementId: "G-K96EPP6CJ6"
+    appId: "1:361788135471:web:c7ea5f0486138b0064ceda"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
   function getProfileIdFromHash() {
-    // expected: #/p/<profileId>
-    const h = window.location.hash || "";
-    const parts = h.replace(/^#\/?/, "").split("/");
-    if (parts.length >= 2 && parts[0] === "p") return decodeURIComponent(parts[1]);
-    return null;
+    const hash = window.location.hash || "";
+    const parts = hash.replace(/^#\/?/, "").split("/");
+    return parts.length === 2 && parts[0] === "p"
+      ? decodeURIComponent(parts[1])
+      : null;
   }
 
   const profileId = getProfileIdFromHash();
@@ -78,54 +77,41 @@
   const statusEl = document.getElementById("status");
   const linksEl = document.getElementById("links");
   const subtitleEl = document.getElementById("subtitle");
-
   const currentUrl = window.location.href;
 
-  profileIdEl.textContent = profileId ?? "(missing)";
+  profileIdEl.textContent = profileId ?? "(invalid)";
   subtitleEl.textContent = profileId
     ? "Tap/scan link to view the latest profile."
-    : "Invalid link format. Expected #/p/<profileId>.";
+    : "Invalid CryptoID link.";
 
   // Buttons
   document.getElementById("copyBtn").onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(currentUrl);
-      statusEl.textContent = "Copied link ✅";
-    } catch {
-      statusEl.textContent = "Copy failed. Long-press the URL in browser.";
-    }
+    await navigator.clipboard.writeText(currentUrl);
+    statusEl.textContent = "Copied link ✅";
   };
 
   document.getElementById("shareBtn").onclick = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "CryptoID Profile", text: "CryptoID profile link", url: currentUrl });
-        statusEl.textContent = "Shared ✅";
-      } else {
-        statusEl.textContent = "Share not supported here. Use Copy Link.";
-      }
-    } catch {
-      statusEl.textContent = "Share canceled.";
+    if (navigator.share) {
+      await navigator.share({
+        title: "CryptoID Profile",
+        url: currentUrl
+      });
     }
   };
 
   document.getElementById("txtBtn").onclick = () => {
-    const blob = new Blob([currentUrl + "\n"], { type: "text/plain" });
+    const blob = new Blob([currentUrl], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "cryptoid-link.txt";
     a.click();
-    URL.revokeObjectURL(a.href);
-    statusEl.textContent = "Downloaded .txt ✅";
   };
 
   document.getElementById("vcfBtn").onclick = () => {
-    const name = "CryptoID Profile";
     const vcf =
 `BEGIN:VCARD
 VERSION:3.0
-FN:${name}
-NOTE:CryptoID profile link
+FN:CryptoID Profile
 URL:${currentUrl}
 END:VCARD`;
     const blob = new Blob([vcf], { type: "text/vcard" });
@@ -133,18 +119,15 @@ END:VCARD`;
     a.href = URL.createObjectURL(blob);
     a.download = "cryptoid.vcf";
     a.click();
-    URL.revokeObjectURL(a.href);
-    statusEl.textContent = "Downloaded contact ✅";
   };
 
-  async function loadProfile(pid) {
+  async function loadProfile(profileId) {
     statusEl.textContent = "Loading profile…";
-    linksEl.style.display = "none";
     linksEl.innerHTML = "";
+    linksEl.style.display = "none";
 
     try {
-      const ref = doc(db, "profiles", pid);
-      const snap = await getDoc(ref);
+      const snap = await getDoc(doc(db, "profiles", profileId));
 
       if (!snap.exists()) {
         statusEl.textContent = "Profile not found. Ask the sender to re-share.";
@@ -152,35 +135,43 @@ END:VCARD`;
       }
 
       const data = snap.data();
-      const displayName = data.displayName || "CryptoID User";
+      document.querySelector("h1").textContent =
+        data.displayName || "CryptoID Profile";
+
       const links = Array.isArray(data.links) ? data.links : [];
+      const renderedLinks = [];
 
-      // update heading/subtitle
-      document.querySelector("h1").textContent = displayName;
-      statusEl.textContent = links.length ? "Links" : "No public links shared yet.";
+      links.forEach(item => {
+        if (item && typeof item === "object") {
+          Object.entries(item).forEach(([label, url]) => {
+            if (typeof url === "string" && url.startsWith("http")) {
+              renderedLinks.push({ label, url });
+            }
+          });
+        }
+      });
 
-      if (links.length) {
-        linksEl.style.display = "block";
-        linksEl.innerHTML = links
-          .filter(l => l && l.url)
-          .map(l => {
-            const label = (l.label || l.url).toString();
-            const url = l.url.toString();
-            return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
-          })
-          .join("");
+      if (renderedLinks.length === 0) {
+        statusEl.textContent = "No public links shared yet.";
+        return;
       }
+
+      statusEl.textContent = "Links";
+      linksEl.style.display = "block";
+      linksEl.innerHTML = renderedLinks
+        .map(
+          l =>
+            `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`
+        )
+        .join("");
+
     } catch (e) {
       console.error(e);
-      statusEl.textContent = "Error loading profile. Try again later.";
+      statusEl.textContent = "Error loading profile.";
     }
   }
 
-  if (profileId) {
-    loadProfile(profileId);
-  } else {
-    statusEl.textContent = "Invalid link. Example: #/p/test123";
-  }
+  if (profileId) loadProfile(profileId);
 </script>
 
 </body>
