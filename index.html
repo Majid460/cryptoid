@@ -39,6 +39,12 @@
         <button id="txtBtn">Download .txt</button>
         <button id="vcfBtn">Save Contact (.vcf)</button>
       </div>
+      <div style="height:12px"></div>
+      <div class="row" style="margin-top:12px;">
+          <a class="btn" id="openInAppBtn" href="#">Open in CryptoID</a>
+          <a class="btn" id="installAndroidBtn" href="#" target="_blank" rel="noopener">Install on Android</a>
+          <a class="btn" id="installIosBtn" href="#" target="_blank" rel="noopener">Install on iOS</a>
+      </div>
 
       <div class="links" id="links" style="margin-top:14px; display:none;"></div>
 
@@ -172,6 +178,35 @@ END:VCARD`;
   }
 
   if (profileId) loadProfile(profileId);
+    // TODO: put your real links here later
+const ANDROID_INSTALL_URL = "https://example.com/android.apk";     // replace later
+const IOS_INSTALL_URL = "https://example.com/testflight";         // replace later
+
+// Deep link (works when app is installed)
+const deepLink = profileId
+  ? `cryptoid://p/${encodeURIComponent(profileId)}`
+  : `cryptoid://home`;
+
+const openBtn = document.getElementById("openInAppBtn");
+const aBtn = document.getElementById("installAndroidBtn");
+const iBtn = document.getElementById("installIosBtn");
+
+aBtn.href = ANDROID_INSTALL_URL;
+iBtn.href = IOS_INSTALL_URL;
+
+openBtn.onclick = (e) => {
+  e.preventDefault();
+  if (!profileId) return;
+
+  // Try opening the app
+  window.location.href = deepLink;
+
+  // If app not installed, user stays on web -> we show hint
+  setTimeout(() => {
+    statusEl.textContent = "If the app didn’t open, install CryptoID below.";
+  }, 900);
+};
+
 </script>
 
 </body>
