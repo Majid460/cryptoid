@@ -93,7 +93,7 @@
   }
 
   function getProfileId() {
-    return getProfileIdFromPath() || getProfileIdFromHash();
+   return getProfileIdFromRouteParam() || getProfileIdFromPath() || getProfileIdFromHash();
   }
 
   function canonicalUrlForProfile(profileId) {
@@ -161,6 +161,16 @@ END:VCARD`;
   };
 
   // ===== Profile loading =====
+  function getProfileIdFromRouteParam() {
+  const params = new URLSearchParams(window.location.search);
+  const route = params.get("route"); // e.g. "/cryptoid/u/test123"
+  if (!route) return null;
+
+  // Extract /u/<id> from the routed path
+  const parts = route.split("/").filter(Boolean); // ["cryptoid","u","test123"]
+  const idx = parts.indexOf("u");
+  return idx !== -1 && parts[idx + 1] ? decodeURIComponent(parts[idx + 1]) : null;
+}
 
   async function loadProfile(profileId) {
     statusEl.textContent = "Loading profile…";
