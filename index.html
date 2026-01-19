@@ -105,6 +105,10 @@
   // ===== DOM =====
 
   const profileId = getProfileId();
+  if (profileId) {
+      const clean = canonicalUrlForProfile(profileId);
+      window.history.replaceState({}, "", clean);
+  }
   const profileIdEl = document.getElementById("profileId");
   const statusEl = document.getElementById("status");
   const linksEl = document.getElementById("links");
