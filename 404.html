@@ -1,8 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0; url=./#/" />
-</head>
-<body></body>
+  <head>
+    <meta charset="utf-8" />
+    <title>CryptoID</title>
+    <script>
+      // Redirect any deep route back to /cryptoid/ with the route encoded
+      var path = window.location.pathname;  // e.g. /cryptoid/u/test123
+      var search = window.location.search;
+      var hash = window.location.hash;
+
+      var target =
+        window.location.origin +
+        "/cryptoid/" +
+        "?route=" +
+        encodeURIComponent(path + search + hash);
+
+      window.location.replace(target);
+    </script>
+  </head>
+  <body></body>
 </html>
